@@ -1,0 +1,8 @@
+Grammar 6
+S  ::=  A S  
+S  ::=  F S  
+S  ::=  lambda  
+A  ::=  a  
+B  ::=  b  
+F  ::=  i B t S 
+F  ::=  f B t S e S

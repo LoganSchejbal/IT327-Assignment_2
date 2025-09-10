@@ -1,0 +1,10 @@
+Grammar 5
+S  ::=  A B a b
+S  ::=  B 
+A  ::=  A S
+A  ::=  A a
+A  ::=  lambda
+A  ::=  B  
+B  ::=  B b
+B  ::=  b S
+B  ::=  t  
