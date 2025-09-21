@@ -8,9 +8,15 @@ public class printFF {
     public static void main(String[] args){
         //Input to select a file
         //File must be in same folder or a path given
-        Scanner input = new Scanner(System.in);
-        String fileName = input.nextLine();
-        input.close();
+        String fileName;
+        if (args.length > 0 && args[0].length() != 0) {
+            fileName = args[0];
+        } 
+        else {
+            Scanner input = new Scanner(System.in);
+            fileName = input.nextLine();
+            input.close();
+        }
 
 
         //Creates the File instance
@@ -47,7 +53,6 @@ public class printFF {
         }
         
         //Outputs fileContents's contents
-        //UPDATE THIS ARRAY TO FOLLOW ASSIGNMENT
         for (int i = 0; i < fileContents.size(); ++i) {
             System.out.print(fileContents.get(i).get(0) + " ::= ");
             for(int j = 1; j < fileContents.get(i).size(); ++j){
@@ -150,17 +155,6 @@ public class printFF {
             System.out.print(terminal.get(i) + " ");
         }
 
-        //Adds start symbol to end of fileContents for every rule with the start symbol
-        String startSymb = nonterminal.get(0);
-        for (int i = 0; i < fileContents.size(); ++i){
-            if(startSymb.equals(fileContents.get(i).get(0))){
-                fileContents.get(0).add("$");
-            }
-            else{
-                break;
-            }
-        }
-
         //FirstSets find the initial first characters for each nonterminal symbol and gives consideration to the lambda character
         ArrayList<ArrayList<String>> firstSets = firstSet(fileContents, nonterminal);
 
@@ -171,12 +165,27 @@ public class printFF {
         //Prints out the final version of firstSets
         System.out.print("\n\nFirst Sets:\n===");
         for(int i = 0; i < firstSets.size(); ++i){
-            System.out.print("\n" + nonterminal.get(i) + ": ");
+            System.out.print("\n" + firstSets.get(i).get(0) + ": ");
             for(int j = 1; j < firstSets.get(i).size(); ++j){
                 System.out.print(firstSets.get(i).get(j) + " ");
             }
         }
 
+        //This function initializes followSet with what needs to be added.
+        //Follows the rules of the followSets without handling any recursion
+        ArrayList<ArrayList<String>> followSets = followSet(fileContents, firstSets, nonterminal);
+
+        //Refines the follow sets so that if there is a nonterminal symbol, it replaces that with its followset
+        followSets = refineFollowSets(followSets, nonterminal);
+
+        //Prints out the final Version of the follow Sets
+        System.out.print("\n\nFollow Sets:\n===");
+        for(int i = 0; i < followSets.size(); ++i){
+            System.out.print("\n" + followSets.get(i).get(0) + ": ");
+            for(int j = 1; j < followSets.get(i).size(); ++j){
+                System.out.print(followSets.get(i).get(j) + " ");
+            }
+        }
     }
 
     private static ArrayList<ArrayList<String>> firstSet(ArrayList<ArrayList<String>> fileContents, ArrayList<String> nonterminal){
@@ -219,7 +228,7 @@ public class printFF {
             }
         }
 
-        cleanupSets(firstSet);
+        cleanupSets(firstSet, false);
 
         return firstSet;
     }
@@ -252,16 +261,6 @@ public class printFF {
                             }
                         }
                         else{
-                            //Just Debug Info
-                            System.out.println("Unable to find symbol: |" + firstSets.get(i).get(j) + "|");
-                            System.out.println("nonterminals in set: ");
-                            for(int m = 0; m < nonterminal.size(); ++m){
-                                System.out.println("|" + nonterminal.get(m) +"|");
-                            }
-                            System.out.println("nonterminals in Set: ");
-                            for (int m = 0; m < firstSets.size(); ++m){
-                                System.out.println("|" + firstSets.get(m).get(0)+ "|");
-                            }
                         }
 
                         //Now we add the tempList in place of the nonterminal symbol
@@ -279,7 +278,7 @@ public class printFF {
         }
 
         //Remove duplicates
-        cleanupSets(firstSets);
+        cleanupSets(firstSets, false);
 
         //If its changed at all, recurse to see if it needs further adjustments
         if (isChanged){
@@ -290,7 +289,7 @@ public class printFF {
         }
     }
 
-    private static ArrayList<ArrayList<String>> cleanupSets(ArrayList<ArrayList<String>> set){
+    private static ArrayList<ArrayList<String>> cleanupSets(ArrayList<ArrayList<String>> set, boolean removeLambda){
         //This Function just removes duplicate entries
         for (int i = 0 ; i < set.size(); ++i){
             for (int j = set.get(i).size() - 1; j > 0; --j){
@@ -307,23 +306,170 @@ public class printFF {
                 }
             }
         }
+
+        //This part of the code is responsible for removing any lambda characters in follow Sets
+        //It will only run if the second pass through variable is true
+        if (removeLambda){
+            for(int i = 0; i < set.size(); ++i){
+                for (int j = set.get(i).size() - 1; j > 0; --j){
+                    if (set.get(i).get(j).equals("lambda")){
+                        set.get(i).remove(j);
+                        break;
+                    }
+                }
+            }
+        }
+        else{
+
+        }
         return set;
     }
 
-    private static ArrayList<ArrayList<String>> addToSet(String position, ArrayList<ArrayList<String>> firstSet, String Symbol){
-        for(int i = 0; i < firstSet.size(); ++i){
-            if(firstSet.get(i).get(0).equals(position)){
-                firstSet.get(i).add(Symbol);
-                return firstSet;
+    private static ArrayList<ArrayList<String>> addToSet(String position, ArrayList<ArrayList<String>> set, String Symbol){
+        //function is just a shorthand to add a particular thing to an ArrayList when you don't know which row to add to
+        //Essentially just finds the row of the set that the position variable is passed as in row(i).get(0) and adds Symbol to that row
+        for(int i = 0; i < set.size(); ++i){
+            if(set.get(i).get(0).equals(position)){
+                set.get(i).add(Symbol);
+                return set;
+            }
+            else{
+
             }
         }
-        return firstSet;
+        return set;
     }
 
-    private static ArrayList<String> followSet(){
-        ArrayList<String> followSet = new ArrayList<>();
+    private static ArrayList<ArrayList<String>> followSet(ArrayList<ArrayList<String>> fileContents, ArrayList<ArrayList<String>> firstSet, ArrayList<String> nonterminal){
+        ArrayList<ArrayList<String>> followSet = new ArrayList<>();
+        //Just adds the nonterminal symbols into the vector so each line can be identified
+        for (int i = 0; i < nonterminal.size(); ++i){
+            ArrayList<String> tempList = new ArrayList<>();
+            tempList.add(nonterminal.get(i));
+            followSet.add(tempList);
+        }
 
-        return followSet();
+        //Add $ to first
+        followSet.get(0).add("$");
+
+        for (int i = 0; i < fileContents.size(); ++i){
+            //i corresponds to row of fileContents
+            //j corresponds to element of a row in filecontents
+            //k corresponds to list of nonterminal elements
+            String position = fileContents.get(i).get(0);
+            for (int j = 1; j < fileContents.get(i).size(); ++j){
+                for (int k = 0; k < nonterminal.size(); ++k){
+                    if (fileContents.get(i).get(j).equals(nonterminal.get(k))){
+                        if (fileContents.get(i).size() - 1 == j){
+                            //Add Follow set
+                            addToSet(fileContents.get(i).get(j), followSet, position);
+                        }
+                        else{
+                            boolean isNonTerminal = false;
+                            //l corresponds to list of nonterminal elements
+                            //m corresponds to row of the follow set
+                            //n corresponds to row of first set
+                            //o corresponds to element of the first set
+                            for (int l = 0; l < nonterminal.size(); ++l){
+                                if (fileContents.get(i).get(j+1).equals(nonterminal.get(l))){
+                                    //Add First set
+                                    isNonTerminal = true;
+                                    for (int m = 0; m < followSet.size(); ++m){
+                                        if (fileContents.get(i).get(j).equals(followSet.get(m).get(0))){
+                                            for(int n = 0; n < firstSet.size(); ++n){
+                                                if (fileContents.get(i).get(j+1).equals(firstSet.get(n).get(0))){
+                                                    for (int o = 1; o < firstSet.get(n).size(); ++o){
+                                                        if(firstSet.get(n).get(o).equals("lambda")){
+                                                            followSet.get(m).add(fileContents.get(i).get(j+1));
+                                                        }
+                                                        else{
+                                                            followSet.get(m).add(firstSet.get(n).get(o));
+                                                        }
+                                                    }
+                                                }
+                                                else{
+
+                                                }
+                                            }
+                                        }
+                                        else{
+
+                                        }
+                                    }
+                                }
+                                else{
+                                }
+                            }
+
+                            if(!isNonTerminal){
+                                //Add the terminal symbol
+                                addToSet(fileContents.get(i).get(j), followSet, fileContents.get(i).get(j+1));
+                            }
+                        }
+                    }
+                    else{
+
+                    }
+                }
+            }
+        }
+        cleanupSets(followSet, true);
+
+        return followSet;
+    }
+
+    private static ArrayList<ArrayList<String>> refineFollowSets(ArrayList<ArrayList<String>> followSet, ArrayList<String> nonterminal){
+        boolean isChanged = false;
+        //This funtion recursively adds the followSets of nonterminal symbol
+        //Essentialy it looks for a nonterminal in the followSet ArrayList
+        //If one is found, 
+        //  - IsChanged is becomes true
+        //      - this signals that we need to check again for more possible nonterminal symbols after this call
+        //  - the followSet of that nonterminal is added to the current symbol 
+        for(int i = 0; i < followSet.size(); ++i){
+            for(int j = 1; j < followSet.get(i).size(); ++j){
+                for (int k = 0; k < nonterminal.size(); ++k){
+                    if(followSet.get(i).get(j).equals(nonterminal.get(k))){
+                        //Makes sure the function is not adding itself
+                        if(followSet.get(i).get(j).equals(followSet.get(i).get(0))){
+                            followSet.get(i).remove(j);
+                            isChanged = true;
+                            break;
+                        }
+                        else{
+                            //Adds the follow set
+                            String temp = followSet.get(i).get(j);
+                            followSet.get(i).remove(j);
+                            for (int l = 0; l < followSet.size(); ++l){
+                                if (followSet.get(l).get(0).equals(temp)){
+                                    for (int m = 1; m < followSet.get(l).size(); ++m){
+                                        if (!followSet.get(i).get(0).equals(followSet.get(l).get(m))){
+                                            followSet.get(i).add(followSet.get(l).get(m));
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                            isChanged = true;
+                            break;
+                        }
+                    }
+                    else{
+
+                    }
+                }
+            }
+        }
+
+        //Call cleanup function
+        //If the follow set is edited, it will recurse and run again
+        cleanupSets(followSet, true);
+        if(isChanged){
+            return refineFollowSets(followSet, nonterminal);
+        }
+        else{
+            return followSet;
+        }
     }
 
 }   
